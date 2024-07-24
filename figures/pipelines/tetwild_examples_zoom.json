@@ -1,0 +1,43 @@
+{
+  "global_args": {
+    "skip_fname": [
+    ],
+    "fname": [
+      "103354_sf_1.obj",
+      "46602_sf.obj",
+      "93366_sf.obj",
+      "98008_sf_1.obj",
+      "98546_sf_1.obj",
+      "102537_sf_1.obj",
+      "106838_sf_1.obj",
+      "114029_sf.obj",
+      "226568_sf.obj",
+      "298323_sf.obj",
+      "317215_sf_1.obj",
+      "472151_sf.obj",
+      "496673_sf.obj",
+      "609436_sf_1.obj",
+      "794006_sf_1.obj",
+      "1368052_sf_1.obj"
+	],
+    "input_dir": "data/tetwild_all/",
+    "camera_dir": "data/zoom_cameras/",
+    "no_cones": false,
+    "no_cut": false,
+    "N_bw": 300,
+    "height": 1600,
+    "width": 2560,
+    "num_processes": 8
+  },
+  "pipeline": [
+    {
+      "method": "holonomy_render",
+      "skip": false,
+      "args_list": [
+        {
+          "suffix": "refined_with_uv"
+        }
+      ]
+    }
+  ]
+}

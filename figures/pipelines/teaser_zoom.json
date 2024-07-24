@@ -1,0 +1,44 @@
+{
+  "global_args": {
+    "skip_fname": [
+    ],
+    "input_dir": "data/teaser/",
+    "height": 1600,
+    "width": 2560,
+    "num_processes": 3
+  },
+  "pipeline": [
+    {
+      "method": "holonomy_render",
+      "skip": false,
+      "args_list": [
+        {
+          "fname": [
+              "1688588_sf_nonmanifold_cleaned_connected.obj"
+           ],
+          "camera_dir": "data/zoom_cameras/",
+          "no_cones": false,
+          "no_cut": false,
+          "N_bw": 300,
+          "suffix": "refined_with_uv"
+        }
+      ]
+    },
+    {
+      "method": "holonomy_render",
+      "skip": false,
+      "args_list": [
+        {
+          "fname": [
+              "tris_754688.obj"
+           ],
+          "camera_dir": "data/zoom_cameras/",
+          "no_cones": false,
+          "no_cut": false,
+          "N_bw": 400,
+          "suffix": "refined_with_uv"
+        }
+      ]
+    }
+  ]
+}

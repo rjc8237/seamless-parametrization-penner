@@ -1,0 +1,57 @@
+{
+  "global_args": {
+    "skip_fname": [
+		"702414_sf_1.obj",
+		"481225_sf.obj",
+		"591243_sf.obj",
+		"1582423_sf.obj",
+		"1013015_sf.obj",
+		"471985_sf.obj",
+		"471984_sf.obj",
+		"838512_sf.obj",
+		"42041_sf_3.obj",
+		"481225_sf.obj",
+		"358257_sf.obj",
+		"754638_sf.obj",
+		"94019_sf.obj",
+		"39893_sf.obj",
+		"1083353_sf.obj",
+		"44948_sf_3.obj",
+		"96776_sf_2.obj",
+		"39011_sf_2.obj",
+		"929562_sf.obj",
+		"370993_sf.obj",
+		"44949_sf_3.obj",
+		"838520_sf_1.obj",
+		"108447_sf_2.obj",
+		"199663_sf.obj",
+		"1222709_sf.obj",
+		"83676_sf_1.obj",
+		"110372_sf_1.obj",
+		"466802_sf.obj",
+		"82536_sf_2.obj",
+		"99468_sf_1.obj",
+		"916909_sf_1.obj",
+		"1368069_sf.obj",
+		"103354_sf_1.obj",
+        "1005586_sf_1.obj",
+		"1688588_sf_1.obj"
+    ],
+    "input_dir": "data/tetwild_all/",
+    "optimization_method": "metric",
+    "histogram_choice": "stretch_factors",
+    "conf_error_eps": 1e-12,
+    "conf_max_itr": 100,
+    "use_delaunay": true,
+    "num_processes": 24
+  },
+  "pipeline": [
+    {
+      "method": "optimize_angles",
+      "skip": false,
+      "args_list": [
+        {}
+      ]
+    }
+  ]
+}

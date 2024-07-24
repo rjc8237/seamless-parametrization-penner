@@ -1,0 +1,30 @@
+{
+  "global_args": {
+    "skip_fname": [],
+    "fname": [
+      "gargoyle100K.obj",
+      "twirl.obj"
+    ],
+    "input_dir": "data/closed-Myles",
+    "optimization_method": "metric",
+    "histogram_choice": "stretch_factors",
+    "conf_error_eps": 1e-12,
+    "conf_max_itr": 200,
+    "use_delaunay": true,
+    "regularize": false,
+    "height": 1600,
+    "width": 2560,
+    "num_processes": 8
+  },
+  "pipeline": [
+    {
+      "method": "holonomy_render",
+      "skip": false,
+      "args_list": [
+        {
+          "suffix": "optimized_uv"
+        }
+      ]
+    }
+  ]
+}

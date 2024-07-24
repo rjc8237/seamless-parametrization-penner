@@ -1,0 +1,30 @@
+{
+  "global_args": {
+    "skip_fname": [
+    ],
+    "fname": [
+      "1688588_sf_nonmanifold_cleaned_connected.obj",
+      "filigree100k.obj",
+      "tris_754688.obj"
+	],
+    "input_dir": "data/teaser/",
+    "optimization_method": "metric",
+    "height": 1600,
+    "width": 2560,
+    "no_cones": true,
+    "no_cut": true,
+    "N_bw": 100,
+    "num_processes": 3
+  },
+  "pipeline": [
+    {
+      "method": "holonomy_render",
+      "skip": false,
+      "args_list": [
+        {
+          "suffix": "refined_with_uv"
+        }
+      ]
+    }
+  ]
+}

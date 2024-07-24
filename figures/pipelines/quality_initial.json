@@ -1,0 +1,66 @@
+{
+  "global_args": {
+    "skip_fname": [],
+    "fname": [
+      "gargoyle100K.obj",
+      "twirl.obj"
+    ],
+    "input_dir": "data/closed-Myles",
+    "optimization_method": "metric",
+    "histogram_choice": "stretch_factors",
+    "conf_error_eps": 1e-12,
+    "conf_max_itr": 100,
+    "use_delaunay": true,
+    "regularize": true,
+    "min_angle": 5,
+    "height": 1600,
+    "width": 2560,
+    "num_processes": 8
+  },
+  "pipeline": [
+    {
+      "method": "optimize_angles",
+      "skip": false,
+      "args_list": [
+        {}
+      ]
+    },
+    {
+      "method": "holonomy_overlay",
+      "skip": false,
+      "args_list": [
+        {
+        }
+      ]
+    },
+    {
+      "method": "statistics",
+      "skip": false,
+      "args_list": [
+        {
+        }
+      ]
+    },
+    {
+      "method": "holonomy_histogram",
+      "skip": false,
+      "args_list": [
+        {
+          "bin_min": 1.0,
+          "bin_max": 1.1,
+          "ylim": 100,
+          "color": "#e0a96c"
+        }
+      ]
+    },
+    {
+      "method": "holonomy_render",
+      "skip": false,
+      "args_list": [
+        {
+          "suffix": "refined_with_uv"
+        }
+      ]
+    }
+  ]
+}

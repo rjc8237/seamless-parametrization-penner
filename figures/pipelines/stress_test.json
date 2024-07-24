@@ -1,0 +1,80 @@
+{
+  "global_args": {
+    "skip_fname": [],
+    "fname": [
+      "cup.obj"
+    ],
+    "input_dir": "data/closed-Myles",
+    "optimization_method": "metric",
+    "histogram_choice": "stretch_factors",
+    "use_delaunay": true,
+    "num_processes": 5,
+    "bin_min": 1.0,
+    "bin_max": 1.5,
+    "ylim": 100
+  },
+  "pipeline": [
+    {
+      "method": "holonomy_overlay",
+      "skip": false,
+      "args_list": [
+        {
+          "suffix": "0"
+        },
+        {
+          "suffix": "1"
+        },
+        {
+          "suffix": "2"
+        },
+        {
+          "suffix": "3"
+        },
+        {
+          "suffix": "4"
+        }
+      ]
+    },
+    {
+      "method": "holonomy_histogram",
+      "skip": false,
+      "args_list": [
+        {
+          "suffix": "0"
+        },
+        {
+          "suffix": "1"
+        },
+        {
+          "suffix": "2"
+        },
+        {
+          "suffix": "3"
+        },
+        {
+          "suffix": "4"
+        }
+      ]
+    },
+    {
+      "method": "holonomy_render",
+      "skip": false,
+      "args_list": [
+        {
+          "suffix": "0_refined_with_uv"
+        },
+        {
+          "suffix": "1_refined_with_uv"
+        },
+        {
+          "suffix": "2_refined_with_uv"
+        },
+        {
+          "suffix": "3_refined_with_uv"
+        },
+        {
+          "suffix": "4_refined_with_uv"
+        }      ]
+    }
+  ]
+}
