@@ -28,6 +28,9 @@ if(PROJECT_IS_TOP_LEVEL)
   option ( SUITESPARSE_USE_CUDA OFF )
 endif()
 
+# Install executables to bin directory
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 # add core Penner methods
 add_subdirectory(ext/penner-optimization)
 

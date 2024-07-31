@@ -36,7 +36,7 @@ The core parameterization method is `bin/parametrize_seamless`. This executable 
 |`--field` | Cross field rotation form filepath| `none`|
 |`--output` | Output directory| `./`|
 |`--remove_holonomy_constraints` | Only constrain cone angles (parametrization no longer seamless)| `false`|
-|`--max_iter` | Maximum number of iterations| `500`| 
+|`--max_itr` | Maximum number of iterations| `500`| 
 |`--error_eps` | Maximum allowed angle error| `1e-12`|
 |`--max_triangle_quality` | Regularize initial metric until quality measure below value (`0` for no regularization) | `0`|
 |`--use_delaunay` | Perform Newton in Delaunay connectivity | `true`|
@@ -50,7 +50,7 @@ Scripts to generate the figures of the paper are included in `figures`.
 
 ![Some example figures](media/myles-examples.jpg)
 
-The models (with cone and field data) and cameras used in [Seamless Parametrization in Penner Coordinates](https://dl.acm.org/doi/10.1145/3658202) necessary for these scripts can be downloaded [here](https://cims.nyu.edu/gcl/papers/2021-Conformal.zip);  `closed-myles`, `thingi10k-tetwild` and `cameras` must be copied to `data/closed-Myles`, `data/thingi10k-tetwild`, and `data/cameras` respectively.
+The models (with cone and field data) and cameras used in [Seamless Parametrization in Penner Coordinates](https://dl.acm.org/doi/10.1145/3658202) necessary for these scripts will be available soon;  `closed-myles`, `thingi10k-tetwild` and `cameras` must be copied to `data/closed-Myles`, `data/thingi10k-tetwild`, and `data/cameras` respectively.
 
 A Conda environment must be activated (before compiling the code) with
 ```
