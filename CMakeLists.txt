@@ -8,7 +8,7 @@ add_compile_options(-fPIC)
 
 if(PROJECT_IS_TOP_LEVEL)
   # Options for the project
-  option(USE_PYBIND "Generate pybindings" ON)
+  option(USE_PYBIND "Generate pybindings" OFF)
   option(USE_MULTIPRECISION "Use high precision floating point" OFF)
 
   option(USE_SUITESPARSE "Use suitesparse for QR factorization" ON)
@@ -16,10 +16,10 @@ if(PROJECT_IS_TOP_LEVEL)
   option(USE_COMISO "Use Comiso for field generation" ON)
 
   option(RENDER_TEXTURE "Render results" ON)
-  option(ENABLE_VISUALIZATION "Generate viewers for visualization" ON)
+  option(ENABLE_VISUALIZATION "Generate viewers for visualization" OFF)
 
   option(CHECK_VALIDITY "Check validity pre and post conditions" OFF)
-  option(BUILD_CURVATURE_METRIC_TESTS "Build tests" ON)
+  option(BUILD_CURVATURE_METRIC_TESTS "Build tests" OFF)
   option(USE_EMBREE "Use embree" ON)
 
   # Set libigl options
