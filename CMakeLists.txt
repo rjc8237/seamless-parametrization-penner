@@ -1,10 +1,11 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.30)
 project(SeamlessParametrizationPenner)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_compile_options(-fPIC)
+add_compile_options(-Wno-register)
 
 if(PROJECT_IS_TOP_LEVEL)
   # Options for the project
