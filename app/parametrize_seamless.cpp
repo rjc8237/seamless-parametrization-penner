@@ -171,6 +171,7 @@ int main(int argc, char* argv[])
     app.add_option("--field", field_filename, "Rotation field one form")
         ->check(CLI::ExistingFile);
     app.add_option("-o,--output", output_dir, "Output directory");
+    app.add_option("--json", input_json, "JSON specification for uv optimization");
 
     // Marked Metric Parameters
     // NOTE: Only several parameters are exposed to the CLI
