@@ -41,9 +41,109 @@
 #include <CLI/CLI.hpp>
 #include <filesystem>
 
+#include "ExtremeOpt.h"
+#include "MeshCutter.h"
+#include "main_helper.h"
+
 using namespace Penner;
 using namespace Penner::Optimization;
 using namespace Penner::Holonomy;
+
+
+
+
+Eigen::MatrixXd optimize_seamless_parameterization(
+    const Eigen::MatrixXd& V_init,
+    const Eigen::MatrixXi& F_init,
+    const Eigen::MatrixXd& uv_init,
+    const Eigen::MatrixXi& FT_init,
+    const std::string& ffield_path, 
+    const json& config
+)
+{
+    Eigen::MatrixXd uv = uv_init;
+    Eigen::MatrixXi F = FT_init;
+    
+    SymDir::Parameters param;
+    param.max_iters = config["max_iters"]; // iterations
+    param.smooth_only_iters = config["smooth_only_iters"];
+    param.E_target = config["E_target"]; // Energy target
+    param.ls_iters = config["ls_iters"]; // param for linesearch in smoothing operation
+    param.do_newton = config["do_newton"]; // do newton/gd steps for smoothing operation
+    // do global/local smooth (local smooth does not optimize boundary vertices)
+    param.local_smooth = config["local_smooth"];
+    param.global_smooth = config["global_smooth"];
+    param.elen_alpha = config["elen_alpha"];
+    param.do_projection = config["do_projection"];
+    param.with_cons = config["with_cons"];
+    param.Lp = config["Lp"];
+    param.save_meshes = config["save_meshes"];
+    param.do_feature_alignment = config["do_feature_alignment"]; // align feature edges
+    param.symdir_weight = config["symdir_weight"];
+    param.alignment_weight = config["alignment_weight"];
+    param.fix_misaligned = config["fix_misaligned"];
+    param.use_rref = config["use_rref"];
+    param.model_name = config["model"];
+
+	MeshCutter meshcutter(V_init, uv, F_init, F);
+
+	auto [V, EE] = meshcutter.cut_mesh();
+
+    Eigen::MatrixXi FE_init;
+    Eigen::MatrixXi FE(0, 0);
+    Eigen::MatrixXi ME(0, 0);
+    if (param.do_feature_alignment)
+    {
+        // TODO
+        // Loading the feature edge constraints
+        //FE_init = meshcutter.load_feature_edges(input_file);
+        //FE = meshcutter.reindex_feature_edges(FE_init);
+        //if (param.fix_misaligned)
+        //{
+        //    std::string misaligned_file = input_dir + "/" + model + "_misaligned_edges";
+        //    ME = meshcutter.load_misaligned_edges(misaligned_file);
+        //}
+    }
+    
+    double cons_residual = check_constraints(EE, FE, uv, F);
+    spdlog::info("Initial constraints error {}", cons_residual);
+
+    Eigen::MatrixXi new_F;
+    Eigen::MatrixXd new_V, new_uv;
+    SymDir::ExtremeOpt extremeopt(V, F);
+    extremeopt.m_params = param;
+    
+    extremeopt.create_mesh(V, F, uv);
+
+    json opt_log;
+    opt_log["model_name"] = config["model"];
+    opt_log["args"] = config;
+
+    if (extremeopt.m_params.with_cons)
+    {
+        std::vector<std::vector<int>> EE_e = transform_EE(F, EE);
+        std::vector<std::vector<int>> FE_e;
+        if (extremeopt.m_params.do_feature_alignment) {
+            FE_e = transform_FE(F, FE);
+        }
+        extremeopt.init_constraints(EE_e);
+        extremeopt.EE = EE;
+        extremeopt.FE = FE;
+        extremeopt.ME = ME;
+    }
+    // TODO: Make parameter instead of loading
+    extremeopt.comb_matchings(ffield_path);
+    extremeopt.do_optimization(opt_log);
+
+    extremeopt.export_mesh(V, F, uv);
+    cons_residual = check_constraints(EE, FE, uv, F);
+    spdlog::info("Final constraints error {}", cons_residual);
+
+    if (extremeopt.m_params.with_cons) extremeopt.export_EE(EE);
+
+    return uv;
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -58,10 +158,11 @@ int main(int argc, char* argv[])
 
     // Get command line arguments
     CLI::App app{"Generate a constrained seamless parametrization."};
-    std::string mesh_filename = "";
-    std::string Th_hat_filename = "";
+    std::filesystem::path mesh_filename = "";
+    std::filesystem::path Th_hat_filename = "";
     std::filesystem::path field_filename = "";
-    std::string output_dir = "./";
+    std::filesystem::path output_dir = "./";
+    std::filesystem::path input_json = "../scripts/symdir.json";
 
     // IO Parameters
     app.add_option("--mesh", mesh_filename, "Mesh filepath")->check(CLI::ExistingFile)->required();
@@ -70,13 +171,13 @@ int main(int argc, char* argv[])
     app.add_option("--field", field_filename, "Rotation field one form")
         ->check(CLI::ExistingFile);
     app.add_option("-o,--output", output_dir, "Output directory");
-    std::filesystem::create_directory(output_dir);
 
     // Marked Metric Parameters
     // NOTE: Only several parameters are exposed to the CLI
     MarkedMetricParameters marked_metric_params;
     NewtonParameters alg_params;
     bool use_free_cones = false;
+    bool optimize = false;
     app.add_flag(
         "--remove_loop_constraints",
         marked_metric_params.remove_loop_constraints,
@@ -87,6 +188,7 @@ int main(int argc, char* argv[])
         ->check(CLI::NonNegativeNumber);
     app.add_flag("--use_initial_zero", marked_metric_params.use_initial_zero, "Use zero coordinates");
     app.add_flag("--use_free_cones", use_free_cones, "Let cones have free angles");
+    app.add_flag("--optimize", optimize, "Optimize uv map for distortion and field alignment");
     alg_params.output_dir = output_dir;
     alg_params.error_log = true;
 
@@ -109,6 +211,8 @@ int main(int argc, char* argv[])
 
     CLI11_PARSE(app, argc, argv);
     spdlog::set_level(log_level);
+    std::string mesh = mesh_filename.stem();
+    std::filesystem::create_directory(output_dir);
 
     // Get input mesh
     Eigen::MatrixXd V, uv, N;
@@ -120,6 +224,10 @@ int main(int argc, char* argv[])
     std::string field_format = field_filename.extension();
     std::vector<Scalar> Th_hat;
     VectorX rotation_form(F.rows() * 3);
+    Eigen::MatrixXd reference_field;
+    Eigen::VectorXd theta;
+    Eigen::MatrixXd kappa;
+    Eigen::MatrixXi period_jump;
     if ((fit_field) || (field_filename == "")) {
         FieldParameters field_params;
         std::tie(rotation_form, Th_hat) = generate_intrinsic_rotation_form(V, F, field_params);
@@ -129,7 +237,7 @@ int main(int argc, char* argv[])
     else if (field_format == ".ffield")
     {
         auto [m, vtx_reindex] = generate_mesh(V, F, V, F, Th_hat);
-        auto [reference_field, theta, kappa, period_jump] = load_frame_field(field_filename);
+        std::tie(reference_field, theta, kappa, period_jump) = load_frame_field(field_filename);
 
         // initialize feild generator with the given field
         IntrinsicNRosyField field_generator;
@@ -151,9 +259,9 @@ int main(int argc, char* argv[])
         // initialize feild generator with the given theta 
         int num_faces = F.rows();
         Eigen::VectorXi reference_corner(num_faces);
-        Eigen::VectorXd theta(num_faces);
-        Eigen::MatrixXd kappa(num_faces, 3);
-        Eigen::MatrixXi period_jump(num_faces, 3);
+        theta.resize(num_faces);
+        kappa.resize(num_faces, 3);
+        period_jump.resize(num_faces, 3);
         IntrinsicNRosyField field_generator;
         field_generator.min_angle = M_PI / 2.;
         field_generator.use_trivial_boundary = true;
@@ -163,7 +271,9 @@ int main(int argc, char* argv[])
         field_generator.set_field(m, vtx_reindex, F, theta, kappa, period_jump);
         field_generator.compute_principal_matchings(m);
 
-        // extract the rotation form and cone angles
+        // get field
+        field_generator.get_field(m, vtx_reindex, F, reference_corner, theta, kappa, period_jump);
+        reference_field = generate_reference_field(V, F, reference_corner);
         rotation_form = field_generator.compute_rotation_form(m);
         Th_hat = generate_cones_from_rotation_form(m, vtx_reindex, rotation_form);
     }
@@ -266,9 +376,37 @@ int main(int argc, char* argv[])
     // Generate minimal refinement
     RefinementMesh refinement_mesh(V_o, F_o, uv_o, FT_o, fn_to_f_o, endpoints_o);
     auto [V_r, F_r, uv_r, FT_r, fn_to_f_r, endpoints_r] = refinement_mesh.get_VF_mesh();
+
+    bool write_field = true;
+    std::string ffield_file = join_path(output_dir, mesh+".ffield");
+    if (write_field)
+    {
+        auto [reference_field_r, theta_r, kappa_r, period_jump_r] = Holonomy::refine_frame_field(
+            F_r,
+            FT_r,
+            fn_to_f_r,
+            endpoints_r,
+            F,
+            reference_field,
+            theta,
+            kappa,
+            period_jump);
+        write_frame_field(ffield_file,  reference_field_r, theta_r, kappa_r, period_jump_r);
+    }
+
+    // Optionally optimize parameterization 
+    if (optimize)
+    {
+        std::ifstream js_in(input_json);
+        json config = json::parse(js_in);
+        config["model"] = mesh;
+        uv_r = optimize_seamless_parameterization(V_r, F_r, uv_r, FT_r, ffield_file, config);
+    }
+
     if (show_parameterization) view_seamless_parameterization(V_r, F_r, uv_r, FT_r);
 
     // Write the output mesh
-    output_filename = join_path(output_dir, "parameterized_mesh.obj");
+    output_filename = join_path(output_dir, mesh + "_param.obj");
     write_obj_with_uv(output_filename, V_r, F_r, uv_r, FT_r);
+
 }

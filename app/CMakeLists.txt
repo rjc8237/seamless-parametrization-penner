@@ -3,6 +3,7 @@ add_executable(parametrize_seamless
 )
 target_link_libraries(parametrize_seamless PRIVATE
   PennerLib
+  SymmetricDirichletLib
   CLI11::CLI11
 )
 

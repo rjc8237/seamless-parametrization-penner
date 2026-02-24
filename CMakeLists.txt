@@ -25,15 +25,26 @@ if(PROJECT_IS_TOP_LEVEL)
 
   # Set libigl options
   option(LIBIGL_PREDICATES "Use Predicates" ON)
-  set ( SUITESPARSE_ENABLE_PROJECTS "suitesparse_config;cholmod;spqr" )
+  set ( SUITESPARSE_ENABLE_PROJECTS "suitesparse_config;cholmod;spqr;umfpack" )
   option ( SUITESPARSE_USE_CUDA OFF )
 endif()
+
+list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 # Install executables to bin directory
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+list(APPEND SUITESPARSE_LIBS
+  SuiteSparse::SuiteSparseConfig
+  SuiteSparse::SPQR
+  SuiteSparse::CHOLMOD
+  SuiteSparse::UMFPACK
+)
+
 # add core Penner methods
 add_subdirectory(ext/penner-optimization)
+
+include(seamless_optimization)
 
 # add executables
 add_subdirectory(app)
