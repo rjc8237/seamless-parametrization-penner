@@ -28,13 +28,14 @@
 *  Courant Institute of Mathematical Sciences, New York University, USA          *
 *                                          *                                     *
 *********************************************************************************/
+#include "field/frame_field.h"
+#include "field/intrinsic_field.h"
 #include "holonomy/interface.h"
 #include "holonomy/holonomy/newton.h"
 #include "holonomy/holonomy/cones.h"
 #include "holonomy/core/viewer.h"
-#include "holonomy/field/frame_field.h"
-#include "holonomy/field/intrinsic_field.h"
-#include "optimization/parameterization/refinement.h"
+#include "parametrization/refinement.h"
+#include "parametrization/parametrize.h"
 
 #include <igl/readOBJ.h>
 #include <igl/writeOBJ.h>
@@ -46,9 +47,8 @@
 #include "main_helper.h"
 
 using namespace Penner;
-using namespace Penner::Optimization;
+using namespace Penner::Field;
 using namespace Penner::Holonomy;
-
 
 
 
@@ -57,8 +57,10 @@ Eigen::MatrixXd optimize_seamless_parameterization(
     const Eigen::MatrixXi& F_init,
     const Eigen::MatrixXd& uv_init,
     const Eigen::MatrixXi& FT_init,
-    const std::string& ffield_path, 
-    const json& config
+    const Eigen::MatrixXd& reference_field,
+    const Eigen::VectorXd& thetas,
+    const Eigen::MatrixXi& period_jumps,
+    const nlohmann::json& config
 )
 {
     Eigen::MatrixXd uv = uv_init;
@@ -84,6 +86,8 @@ Eigen::MatrixXd optimize_seamless_parameterization(
     param.fix_misaligned = config["fix_misaligned"];
     param.use_rref = config["use_rref"];
     param.model_name = config["model"];
+    param.percentage_target_converge = false;
+    param.use_worst_n_energy_in_ls = false;
 
 	MeshCutter meshcutter(V_init, uv, F_init, F);
 
@@ -115,7 +119,7 @@ Eigen::MatrixXd optimize_seamless_parameterization(
     
     extremeopt.create_mesh(V, F, uv);
 
-    json opt_log;
+    nlohmann::json opt_log;
     opt_log["model_name"] = config["model"];
     opt_log["args"] = config;
 
@@ -131,8 +135,7 @@ Eigen::MatrixXd optimize_seamless_parameterization(
         extremeopt.FE = FE;
         extremeopt.ME = ME;
     }
-    // TODO: Make parameter instead of loading
-    extremeopt.comb_matchings(ffield_path);
+    extremeopt.comb_matchings(reference_field, thetas, period_jumps);
     extremeopt.do_optimization(opt_log);
 
     extremeopt.export_mesh(V, F, uv);
@@ -177,7 +180,7 @@ int main(int argc, char* argv[])
     // NOTE: Only several parameters are exposed to the CLI
     MarkedMetricParameters marked_metric_params;
     NewtonParameters alg_params;
-    bool use_free_cones = false;
+    //bool use_free_cones = false;
     bool optimize = false;
     app.add_flag(
         "--remove_loop_constraints",
@@ -188,7 +191,7 @@ int main(int argc, char* argv[])
     app.add_option("--error_eps", alg_params.error_eps, "Error convergence threshold")
         ->check(CLI::NonNegativeNumber);
     app.add_flag("--use_initial_zero", marked_metric_params.use_initial_zero, "Use zero coordinates");
-    app.add_flag("--use_free_cones", use_free_cones, "Let cones have free angles");
+    app.add_flag("--use_free_cones", marked_metric_params.use_free_cones, "Let cones have free angles");
     app.add_flag("--optimize", optimize, "Optimize uv map for distortion and field alignment");
     alg_params.output_dir = output_dir;
     alg_params.error_log = true;
@@ -223,6 +226,8 @@ int main(int argc, char* argv[])
 
     // Get input angles from cross field or file
     std::string field_format = field_filename.extension();
+    MarkedPennerConeMetric marked_metric;
+    std::vector<int> vtx_reindex;
     std::vector<Scalar> Th_hat;
     VectorX rotation_form(F.rows() * 3);
     Eigen::MatrixXd reference_field;
@@ -231,26 +236,19 @@ int main(int argc, char* argv[])
     Eigen::MatrixXi period_jump;
     if ((fit_field) || (field_filename == "")) {
         FieldParameters field_params;
-        std::tie(rotation_form, Th_hat) = generate_intrinsic_rotation_form(V, F, field_params);
-        std::string mesh_name = std::filesystem::path(mesh_filename).filename().replace_extension();
-        write_vector(Th_hat, join_path(output_dir, mesh_name + "_Th_hat"));
+        field_params.use_principal_directions = true;
+        std::tie(reference_field, theta, kappa, period_jump) = generate_frame_field(V, F, field_params);
+        std::tie(marked_metric, vtx_reindex, rotation_form, Th_hat) = generate_metric_from_field(V, F, theta, kappa, period_jump, marked_metric_params);
+
+        //std::tie(rotation_form, Th_hat) = generate_intrinsic_rotation_form(V, F, field_params);
+        //std::string mesh_name = std::filesystem::path(mesh_filename).filename().replace_extension();
+        //write_vector(Th_hat, join_path(output_dir, mesh_name + "_Th_hat"));
     }
     else if (field_format == ".ffield")
     {
         auto [m, vtx_reindex] = generate_mesh(V, F, V, F, Th_hat);
         std::tie(reference_field, theta, kappa, period_jump) = load_frame_field(field_filename);
-
-        // initialize feild generator with the given field
-        IntrinsicNRosyField field_generator;
-        field_generator.min_angle = M_PI / 2.;
-        field_generator.use_trivial_boundary = true;
-        field_generator.initialize(m);
-        field_generator.set_field(m, vtx_reindex, F, theta, kappa, period_jump);
-
-        // extract the rotation form and cone angles
-        rotation_form = field_generator.compute_rotation_form(m);
-        Th_hat = generate_cones_from_rotation_form(m, vtx_reindex, rotation_form);
-        //write_rosy_field("field.rosy", V, F, reference_field, theta);
+        std::tie(marked_metric, vtx_reindex, rotation_form, Th_hat) = generate_metric_from_field(V, F, theta, kappa, period_jump, marked_metric_params);
     }
     else if (field_format == ".rosy")
     {
@@ -277,6 +275,9 @@ int main(int argc, char* argv[])
         reference_field = generate_reference_field(V, F, reference_corner);
         rotation_form = field_generator.compute_rotation_form(m);
         Th_hat = generate_cones_from_rotation_form(m, vtx_reindex, rotation_form);
+        std::vector<int> free_cones = {};
+        std::tie(marked_metric, vtx_reindex) =
+            generate_marked_metric(V, F, V, F, Th_hat, rotation_form, free_cones, marked_metric_params);
     }
     else {
         // Get input rotation
@@ -296,26 +297,11 @@ int main(int argc, char* argv[])
             Th_hat = generate_cones_from_rotation_form(m, vtx_reindex, rotation_form);
         }
 
+        // Generate initial marked mesh for optimization
+        std::vector<int> free_cones = {};
+        std::tie(marked_metric, vtx_reindex) =
+            generate_marked_metric(V, F, V, F, Th_hat, rotation_form, free_cones, marked_metric_params);
     }
-
-    // get free cones, either none or all
-    std::vector<int> free_cones(0);
-    if (use_free_cones)
-    {
-        int num_vertices = Th_hat.size();
-        for (int vi = 0; vi < num_vertices; ++vi)
-        {
-            if (!float_equal(Th_hat[vi], 2. * M_PI))
-            {
-                free_cones.push_back(vi);
-            }
-        }
-    }
-
-    // Generate initial marked mesh for optimization
-    auto [marked_metric, vtx_reindex] =
-        generate_marked_metric(V, F, V, F, Th_hat, rotation_form, free_cones, marked_metric_params);
-
 
     // Check for invalid cones and fix any issues
     if (!validate_cones(marked_metric)) {
@@ -376,22 +362,24 @@ int main(int argc, char* argv[])
 
     // Generate minimal refinement
     RefinementMesh refinement_mesh(V_o, F_o, uv_o, FT_o, fn_to_f_o, endpoints_o);
+    refinement_mesh.refine_mesh();
+    refinement_mesh.simplify_mesh();
     auto [V_r, F_r, uv_r, FT_r, fn_to_f_r, endpoints_r] = refinement_mesh.get_VF_mesh();
+    auto [reference_field_r, theta_r, kappa_r, period_jump_r] = refine_frame_field(
+        F_r,
+        FT_r,
+        fn_to_f_r,
+        endpoints_r,
+        F,
+        reference_field,
+        theta,
+        kappa,
+        period_jump);
 
     bool write_field = true;
     std::string ffield_file = join_path(output_dir, mesh+".ffield");
     if (write_field)
     {
-        auto [reference_field_r, theta_r, kappa_r, period_jump_r] = Holonomy::refine_frame_field(
-            F_r,
-            FT_r,
-            fn_to_f_r,
-            endpoints_r,
-            F,
-            reference_field,
-            theta,
-            kappa,
-            period_jump);
         write_frame_field(ffield_file,  reference_field_r, theta_r, kappa_r, period_jump_r);
     }
 
@@ -399,12 +387,22 @@ int main(int argc, char* argv[])
     if (optimize)
     {
         std::ifstream js_in(input_json);
-        json config = json::parse(js_in);
+        nlohmann::json config = nlohmann::json::parse(js_in);
         config["model"] = mesh;
-        uv_r = optimize_seamless_parameterization(V_r, F_r, uv_r, FT_r, ffield_file, config);
+        uv_r = optimize_seamless_parameterization(
+            V_r,
+            F_r, 
+            uv_r,
+            FT_r,
+            reference_field_r,
+            theta_r,
+            period_jump_r,
+            config);
     }
 
-    if (show_parameterization) view_seamless_parameterization(V_r, F_r, uv_r, FT_r);
+    if (show_parameterization) view_triangulation(V_o, F_o, fn_to_f_o, endpoints_o, "refinement", false);
+    if (show_parameterization) view_seamless_parameterization(V_o, F_o, uv_o, FT_o, "overlay", false);
+    if (show_parameterization) view_seamless_parameterization(V_r, F_r, uv_r, FT_r, "simplified");
 
     // Write the output mesh
     output_filename = join_path(output_dir, mesh + "_param.obj");

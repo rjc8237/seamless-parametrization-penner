@@ -28,8 +28,8 @@
 *  Courant Institute of Mathematical Sciences, New York University, USA          *
 *                                          *                                     *
 *********************************************************************************/
+#include "field/field.h"
 #include "holonomy/interface.h"
-#include "holonomy/field/field.h"
 #include "holonomy/holonomy/cones.h"
 #include "util/io.h"
 
@@ -47,7 +47,7 @@
 #include <filesystem>
 
 using namespace Penner;
-using namespace Penner::Optimization;
+using namespace Penner::Field;
 using namespace Penner::Holonomy;
 
 void write_error_record(const std::filesystem::path& filepath, const std::string& error_message)
@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
     bool fix_boundary = false;
     bool use_discrete_metric = true;
     std::unique_ptr<DifferentiableConeMetric> cone_metric =
-        generate_initial_mesh(
+        Optimization::generate_initial_mesh(
             V,
             F,
             V,

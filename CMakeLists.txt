@@ -15,6 +15,7 @@ if(PROJECT_IS_TOP_LEVEL)
   option(USE_SUITESPARSE "Use suitesparse for QR factorization" ON)
   # TODO Need to disable most features for mpfr, including suitesparse
   option(USE_COMISO "Use Comiso for field generation" ON)
+  option(USE_UV_OPTIMIZATION "Add uv optimization library" ON)
 
   option(RENDER_TEXTURE "Render results" ON)
   option(ENABLE_VISUALIZATION "Generate viewers for visualization" ON)
@@ -34,17 +35,10 @@ list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 # Install executables to bin directory
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-list(APPEND SUITESPARSE_LIBS
-  SuiteSparse::SuiteSparseConfig
-  SuiteSparse::SPQR
-  SuiteSparse::CHOLMOD
-  SuiteSparse::UMFPACK
-)
-
 # add core Penner methods
 add_subdirectory(ext/penner-optimization)
 
-include(seamless_optimization)
+#include(seamless_optimization)
 
 # add executables
 add_subdirectory(app)
